@@ -25,30 +25,32 @@
 
 package me.lucko.luckperms.forge.capabilities;
 
-import net.minecraft.core.Direction;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
+import me.lucko.luckperms.forge.mixins.CapabilityProviderMixin;
+import me.lucko.luckperms.forge.mixins.LivingEntityMixin;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.util.Direction;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
-import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class UserCapabilityListener {
 
-    @SubscribeEvent
-    public void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
-        event.register(UserCapabilityImpl.class);
-    }
+//    @SubscribeEvent
+//    public void onRegisterCapabilities(AttachCapabilitiesEvent<Entity> event) {
+//        event.register(UserCapabilityImpl.class);
+//    }
 
     @SubscribeEvent
     public void onAttachCapabilities(AttachCapabilitiesEvent<Entity> event) {
-        if (!(event.getObject() instanceof ServerPlayer)) {
+        if (!(event.getObject() instanceof ServerPlayerEntity)) {
             return;
         }
 
@@ -57,20 +59,24 @@ public class UserCapabilityListener {
 
     @SubscribeEvent
     public void onPlayerClone(PlayerEvent.Clone event) {
-        Player previousPlayer = event.getOriginal();
-        Player currentPlayer = event.getEntity();
+        if (!event.isWasDeath()) {
+            return;
+        }
 
-        previousPlayer.reviveCaps();
+        PlayerEntity previousPlayer = event.getOriginal();
+        PlayerEntity currentPlayer = event.getPlayer();
+
+
+        // TODO
+        ((CapabilityProviderMixin) previousPlayer).invokerReviveCaps();
         try {
-            UserCapabilityImpl previous = UserCapabilityImpl.get(previousPlayer);
-            UserCapabilityImpl current = UserCapabilityImpl.get(currentPlayer);
+            UserCapabilityImpl previous = UserCapabilityImpl.get((ServerPlayerEntity) previousPlayer);
+            UserCapabilityImpl current = UserCapabilityImpl.get((ServerPlayerEntity) currentPlayer);
 
             current.initialise(previous);
             current.getQueryOptionsCache().invalidate();
-        } catch (IllegalStateException e) {
-            // continue on if we cannot copy original data
         } finally {
-            previousPlayer.invalidateCaps();
+            ((LivingEntityMixin) previousPlayer).invokerInvalidateCaps();
         }
     }
 
@@ -82,10 +88,10 @@ public class UserCapabilityListener {
         }
 
         @SuppressWarnings("unchecked")
-        @NotNull
+        @Nonnull
         @Override
-        public <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {
-            if (cap != UserCapability.CAPABILITY) {
+        public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> cap, @Nullable Direction side) {
+            if (!cap.getName().equals(UserCapability.CAPABILITY.getName())) {
                 return LazyOptional.empty();
             }
 

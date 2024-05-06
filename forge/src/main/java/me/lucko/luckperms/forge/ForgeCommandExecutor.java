@@ -30,19 +30,23 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.tree.ArgumentCommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
+
 import me.lucko.luckperms.common.command.BrigadierCommandExecutor;
 import me.lucko.luckperms.common.sender.Sender;
-import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.Commands;
-import net.minecraft.commands.arguments.EntityArgument;
-import net.minecraft.server.level.ServerPlayer;
+
+import net.minecraft.command.CommandSource;
+import net.minecraft.command.Commands;
+import net.minecraft.command.arguments.EntityArgument;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
 import java.util.List;
 import java.util.ListIterator;
 
-public class ForgeCommandExecutor extends BrigadierCommandExecutor<CommandSourceStack> {
+@Mod.EventBusSubscriber
+public class ForgeCommandExecutor extends BrigadierCommandExecutor<CommandSource> {
 
     private final LPForgePlugin plugin;
 
@@ -54,8 +58,8 @@ public class ForgeCommandExecutor extends BrigadierCommandExecutor<CommandSource
     @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent event) {
         for (String alias : COMMAND_ALIASES) {
-            LiteralCommandNode<CommandSourceStack> command = Commands.literal(alias).executes(this).build();
-            ArgumentCommandNode<CommandSourceStack, String> argument = Commands.argument("args", StringArgumentType.greedyString())
+            LiteralCommandNode<CommandSource> command = Commands.literal(alias).executes(this).build();
+            ArgumentCommandNode<CommandSource, String> argument = Commands.argument("args", StringArgumentType.greedyString())
                     .suggests(this)
                     .executes(this)
                     .build();
@@ -66,21 +70,21 @@ public class ForgeCommandExecutor extends BrigadierCommandExecutor<CommandSource
     }
 
     @Override
-    public Sender getSender(CommandSourceStack source) {
+    public Sender getSender(CommandSource source) {
         return this.plugin.getSenderFactory().wrap(source);
     }
 
     @Override
-    public List<String> resolveSelectors(CommandSourceStack source, List<String> args) {
+    public List<String> resolveSelectors(CommandSource source, List<String> args) {
         // usage of @ selectors requires at least level 2 permission
-        CommandSourceStack atAllowedSource = source.hasPermission(2) ? source : source.withPermission(2);
+        CommandSource atAllowedSource = source.hasPermission(2) ? source : source.withPermission(2);
         for (ListIterator<String> it = args.listIterator(); it.hasNext(); ) {
             String arg = it.next();
             if (arg.isEmpty() || arg.charAt(0) != '@') {
                 continue;
             }
 
-            List<ServerPlayer> matchedPlayers;
+            List<ServerPlayerEntity> matchedPlayers;
             try {
                 matchedPlayers = EntityArgument.entities().parse(new StringReader(arg)).findPlayers(atAllowedSource);
             } catch (CommandSyntaxException e) {
@@ -98,7 +102,7 @@ public class ForgeCommandExecutor extends BrigadierCommandExecutor<CommandSource
                 continue;
             }
 
-            ServerPlayer player = matchedPlayers.get(0);
+            ServerPlayerEntity player = matchedPlayers.get(0);
             it.set(player.getStringUUID());
         }
 

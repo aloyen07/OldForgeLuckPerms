@@ -50,12 +50,13 @@ import me.lucko.luckperms.forge.listeners.ForgeConnectionListener;
 import me.lucko.luckperms.forge.listeners.ForgePlatformListener;
 import me.lucko.luckperms.forge.messaging.ForgeMessagingFactory;
 import me.lucko.luckperms.forge.service.ForgePermissionHandlerListener;
+
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.query.QueryOptions;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.players.PlayerList;
+import net.minecraft.server.management.PlayerList;
 import net.minecraftforge.fml.ModContainer;
 
 import java.util.Optional;
@@ -195,7 +196,8 @@ public class LPForgePlugin extends AbstractLuckPermsPlugin {
                 this.bootstrap.getServer()
                         .map(MinecraftServer::getPlayerList)
                         .map(PlayerList::getPlayers)
-                        .map(players -> players.stream().map(player -> this.senderFactory.wrap(player.createCommandSourceStack()))).orElseGet(Stream::empty)
+                        .map(players -> players.stream().map(player -> this.senderFactory
+                                .wrap(player.createCommandSourceStack()))).orElseGet(Stream::empty)
         );
     }
 

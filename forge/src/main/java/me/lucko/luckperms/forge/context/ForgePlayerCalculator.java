@@ -28,26 +28,28 @@ package me.lucko.luckperms.forge.context;
 import me.lucko.luckperms.common.config.ConfigKeys;
 import me.lucko.luckperms.common.context.ImmutableContextSetImpl;
 import me.lucko.luckperms.forge.LPForgePlugin;
+
 import net.luckperms.api.context.Context;
 import net.luckperms.api.context.ContextCalculator;
 import net.luckperms.api.context.ContextConsumer;
 import net.luckperms.api.context.ContextSet;
 import net.luckperms.api.context.DefaultContextKeys;
 import net.luckperms.api.context.ImmutableContextSet;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.GameType;
-import net.minecraft.world.level.storage.ServerLevelData;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.world.GameType;
+import net.minecraft.world.server.ServerWorld;
+import net.minecraft.world.storage.ServerWorldInfo;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.util.Set;
 
-public class ForgePlayerCalculator implements ContextCalculator<ServerPlayer> {
+public class ForgePlayerCalculator implements ContextCalculator<ServerPlayerEntity> {
     /**
      * GameType.NOT_SET(-1, "") was removed in 1.17
      */
@@ -67,13 +69,13 @@ public class ForgePlayerCalculator implements ContextCalculator<ServerPlayer> {
     }
 
     @Override
-    public void calculate(@NonNull ServerPlayer target, @NonNull ContextConsumer consumer) {
-        ServerLevel level = target.serverLevel();
+    public void calculate(@NonNull ServerPlayerEntity target, @NonNull ContextConsumer consumer) {
+        ServerWorld level = target.getLevel();
         if (this.dimensionType) {
             consumer.accept(DefaultContextKeys.DIMENSION_TYPE_KEY, getContextKey(level.dimension().location()));
         }
 
-        ServerLevelData levelData = (ServerLevelData) level.getLevelData();
+        ServerWorldInfo levelData = (ServerWorldInfo) level.getLevelData();
         if (this.world) {
             this.plugin.getConfiguration().get(ConfigKeys.WORLD_REWRITES).rewriteAndSubmit(levelData.getLevelName(), consumer);
         }
@@ -100,7 +102,7 @@ public class ForgePlayerCalculator implements ContextCalculator<ServerPlayer> {
 
         MinecraftServer server = this.plugin.getBootstrap().getServer().orElse(null);
         if (this.dimensionType && server != null) {
-            server.registryAccess().registry(Registries.DIMENSION_TYPE).ifPresent(registry -> {
+            server.registryAccess().registry(Registry.DIMENSION_TYPE_REGISTRY).ifPresent(registry -> {
                 for (ResourceLocation resourceLocation : registry.keySet()) {
                     builder.add(DefaultContextKeys.DIMENSION_TYPE_KEY, getContextKey(resourceLocation));
                 }
@@ -108,8 +110,8 @@ public class ForgePlayerCalculator implements ContextCalculator<ServerPlayer> {
         }
 
         if (this.world && server != null) {
-            for (ServerLevel level : server.getAllLevels()) {
-                ServerLevelData levelData = (ServerLevelData) level.getLevelData();
+            for (ServerWorld level : server.getAllLevels()) {
+                ServerWorldInfo levelData = (ServerWorldInfo) level.getLevelData();
                 if (Context.isValidValue(levelData.getLevelName())) {
                     builder.add(DefaultContextKeys.WORLD_KEY, levelData.getLevelName());
                 }
@@ -132,7 +134,7 @@ public class ForgePlayerCalculator implements ContextCalculator<ServerPlayer> {
             return;
         }
 
-        this.plugin.getContextManager().signalContextUpdate((ServerPlayer) event.getEntity());
+        this.plugin.getContextManager().signalContextUpdate((ServerPlayerEntity) event.getPlayer());
     }
 
     @SubscribeEvent
@@ -141,7 +143,7 @@ public class ForgePlayerCalculator implements ContextCalculator<ServerPlayer> {
             return;
         }
 
-        this.plugin.getContextManager().signalContextUpdate((ServerPlayer) event.getEntity());
+        this.plugin.getContextManager().signalContextUpdate((ServerPlayerEntity) event.getPlayer());
     }
 
 }

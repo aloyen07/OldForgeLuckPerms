@@ -29,11 +29,12 @@ import me.lucko.luckperms.common.api.implementation.ApiUser;
 import me.lucko.luckperms.common.event.LuckPermsEventListener;
 import me.lucko.luckperms.common.model.User;
 import me.lucko.luckperms.forge.LPForgePlugin;
+
 import net.luckperms.api.event.EventBus;
 import net.luckperms.api.event.context.ContextUpdateEvent;
 import net.luckperms.api.event.user.UserDataRecalculateEvent;
 import net.luckperms.api.query.QueryOptions;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.entity.player.ServerPlayerEntity;
 
 import java.util.Map;
 
@@ -53,7 +54,7 @@ public class ForgeAutoOpListener implements LuckPermsEventListener {
     }
 
     private void onContextUpdate(ContextUpdateEvent event) {
-        event.getSubject(ServerPlayer.class).ifPresent(player -> refreshAutoOp(player, true));
+        event.getSubject(ServerPlayerEntity.class).ifPresent(player -> refreshAutoOp(player, true));
     }
 
     private void onUserDataRecalculate(UserDataRecalculateEvent event) {
@@ -61,7 +62,7 @@ public class ForgeAutoOpListener implements LuckPermsEventListener {
         this.plugin.getBootstrap().getPlayer(user.getUniqueId()).ifPresent(player -> refreshAutoOp(player, false));
     }
 
-    private void refreshAutoOp(ServerPlayer player, boolean callerIsSync) {
+    private void refreshAutoOp(ServerPlayerEntity player, boolean callerIsSync) {
         if (!callerIsSync && !this.plugin.getBootstrap().getServer().isPresent()) {
             return;
         }
@@ -84,7 +85,7 @@ public class ForgeAutoOpListener implements LuckPermsEventListener {
         }
     }
 
-    private void setOp(ServerPlayer player, boolean value) {
+    private void setOp(ServerPlayerEntity player, boolean value) {
         this.plugin.getBootstrap().getServer().ifPresent(server -> {
             if (value) {
                 server.getPlayerList().op(player.getGameProfile());

@@ -26,6 +26,7 @@
 package me.lucko.luckperms.forge.listeners;
 
 import com.mojang.authlib.GameProfile;
+
 import me.lucko.luckperms.common.config.ConfigKeys;
 import me.lucko.luckperms.common.locale.Message;
 import me.lucko.luckperms.common.locale.TranslationManager;
@@ -34,25 +35,23 @@ import me.lucko.luckperms.common.plugin.util.AbstractConnectionListener;
 import me.lucko.luckperms.forge.ForgeSenderFactory;
 import me.lucko.luckperms.forge.LPForgePlugin;
 import me.lucko.luckperms.forge.capabilities.UserCapabilityImpl;
-import me.lucko.luckperms.forge.util.AsyncConfigurationTask;
+
+import me.lucko.luckperms.forge.events.PlayerNegotiationEvent;
 import net.kyori.adventure.text.Component;
-import net.minecraft.network.Connection;
-import net.minecraft.network.PacketListener;
-import net.minecraft.network.protocol.login.ClientboundLoginDisconnectPacket;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.network.ConfigurationTask;
-import net.minecraft.server.network.ServerConfigurationPacketListenerImpl;
+import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.network.NetworkManager;
+import net.minecraft.network.login.server.SDisconnectLoginPacket;
 import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.network.GatherLoginConfigurationTasksEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+@Mod.EventBusSubscriber
 public class ForgeConnectionListener extends AbstractConnectionListener {
-    private static final ConfigurationTask.Type USER_LOGIN_TASK_TYPE = new ConfigurationTask.Type("luckperms:user_login");
-
     private final LPForgePlugin plugin;
 
     public ForgeConnectionListener(LPForgePlugin plugin) {
@@ -61,30 +60,20 @@ public class ForgeConnectionListener extends AbstractConnectionListener {
     }
 
     @SubscribeEvent
-    public void onGatherLoginConfigurationTasks(GatherLoginConfigurationTasksEvent event) {
-        PacketListener packetListener = event.getConnection().getPacketListener();
-        if (!(packetListener instanceof ServerConfigurationPacketListenerImpl)) {
-            return;
-        }
-
-        GameProfile gameProfile = ((ServerConfigurationPacketListenerImpl) packetListener).getOwner();
-        if (gameProfile == null) {
-            return;
-        }
-
-        String username = gameProfile.getName();
-        UUID uniqueId = gameProfile.getId();
+    public void onPlayerNegotiation(PlayerNegotiationEvent event) {
+        String username = event.getProfile().getName();
+        UUID uniqueId = event.getProfile().isComplete() ? event.getProfile().getId() : UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(StandardCharsets.UTF_8));;
 
         if (this.plugin.getConfiguration().get(ConfigKeys.DEBUG_LOGINS)) {
             this.plugin.getLogger().info("Processing pre-login (sync phase) for " + uniqueId + " - " + username);
         }
 
-        event.addTask(new AsyncConfigurationTask(this.plugin, USER_LOGIN_TASK_TYPE, ctx -> CompletableFuture.runAsync(() -> {
-            onPlayerNegotiationAsync(ctx.getConnection(), uniqueId, username);
-        }, this.plugin.getBootstrap().getScheduler().async())));
+        event.enqueueWork(CompletableFuture.runAsync(() -> {
+            onPlayerNegotiationAsync(event.getConnection(), uniqueId, username);
+        }, this.plugin.getBootstrap().getScheduler().async()));
     }
 
-    private void onPlayerNegotiationAsync(Connection connection, UUID uniqueId, String username) {
+    private void onPlayerNegotiationAsync(NetworkManager connection, UUID uniqueId, String username) {
         if (this.plugin.getConfiguration().get(ConfigKeys.DEBUG_LOGINS)) {
             this.plugin.getLogger().info("Processing pre-login (async phase) for " + uniqueId + " - " + username);
         }
@@ -104,10 +93,10 @@ public class ForgeConnectionListener extends AbstractConnectionListener {
             this.plugin.getEventDispatcher().dispatchPlayerLoginProcess(uniqueId, username, user);
         } catch (Exception ex) {
             this.plugin.getLogger().severe("Exception occurred whilst loading data for " + uniqueId + " - " + username, ex);
-
+            
             if (this.plugin.getConfiguration().get(ConfigKeys.CANCEL_FAILED_LOGINS)) {
                 Component component = TranslationManager.render(Message.LOADING_DATABASE_ERROR.build());
-                connection.send(new ClientboundLoginDisconnectPacket(ForgeSenderFactory.toNativeText(component)));
+                connection.send(new SDisconnectLoginPacket(ForgeSenderFactory.toNativeText(component)));
                 connection.disconnect(ForgeSenderFactory.toNativeText(component));
                 this.plugin.getEventDispatcher().dispatchPlayerLoginProcess(uniqueId, username, null);
             }
@@ -116,7 +105,7 @@ public class ForgeConnectionListener extends AbstractConnectionListener {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onPlayerLoadFromFile(PlayerEvent.LoadFromFile event) {
-        ServerPlayer player = (ServerPlayer) event.getEntity();
+        ServerPlayerEntity player = (ServerPlayerEntity) event.getPlayer();
         GameProfile profile = player.getGameProfile();
 
         if (this.plugin.getConfiguration().get(ConfigKeys.DEBUG_LOGINS)) {
@@ -138,7 +127,7 @@ public class ForgeConnectionListener extends AbstractConnectionListener {
             if (this.plugin.getConfiguration().get(ConfigKeys.CANCEL_FAILED_LOGINS)) {
                 player.connection.disconnect(ForgeSenderFactory.toNativeText(component));
             } else {
-                player.sendSystemMessage(ForgeSenderFactory.toNativeText(component));
+                player.sendMessage(ForgeSenderFactory.toNativeText(component), UUID.randomUUID());
             }
         }
 
@@ -150,7 +139,7 @@ public class ForgeConnectionListener extends AbstractConnectionListener {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
-        ServerPlayer player = (ServerPlayer) event.getEntity();
+        ServerPlayerEntity player = (ServerPlayerEntity) event.getPlayer();
         handleDisconnect(player.getGameProfile().getId());
     }
 

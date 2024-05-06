@@ -1,14 +1,27 @@
-plugins {
-    alias(libs.plugins.shadow)
-    alias(libs.plugins.forgegradle)
-    id("java-library")
+buildscript {
+    repositories {
+        maven { url 'https://plugins.gradle.org/m2' }
+        maven { url 'https://maven.minecraftforge.net/' }
+    }
+
+    dependencies {
+        classpath 'gradle.plugin.com.github.johnrengelman:shadow:7.1.2'
+        classpath 'net.minecraftforge.gradle:ForgeGradle:5.1.+'
+    }
 }
 
+apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'java-library'
+apply plugin: 'net.minecraftforge.gradle'
+
 sourceCompatibility = 1.8
-targetCompatibility = 17
+targetCompatibility = 1.8
 
 minecraft {
     mappings channel: 'official', version: minecraftVersion
+}
+
+repositories {
 }
 
 dependencies {
@@ -32,7 +45,11 @@ jar {
                 'Implementation-Version': project.ext.fullVersion,
                 'Specification-Title': 'luckperms',
                 'Specification-Vendor': 'LuckPerms',
-                'Specification-Version': '1'
+                'Specification-Version': '1',
+                "TweakClass": "org.spongepowered.asm.launch.MixinTweaker",
+                "MixinConfigs": "luckperms.mixins.json",
+                "FMLCorePluginContainsFMLMod": "true",
+                "ForceLoadAsMod": "true",
         )
     }
 }

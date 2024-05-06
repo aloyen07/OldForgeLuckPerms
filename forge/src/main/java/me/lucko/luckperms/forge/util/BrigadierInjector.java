@@ -28,14 +28,16 @@ package me.lucko.luckperms.forge.util;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
+
 import me.lucko.luckperms.common.graph.Graph;
 import me.lucko.luckperms.common.graph.TraversalAlgorithm;
 import me.lucko.luckperms.common.plugin.LuckPermsPlugin;
 import me.lucko.luckperms.forge.capabilities.UserCapability;
 import me.lucko.luckperms.forge.capabilities.UserCapabilityImpl;
+
 import net.luckperms.api.util.Tristate;
-import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.command.CommandSource;
+import net.minecraft.entity.player.ServerPlayerEntity;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -68,14 +70,14 @@ public final class BrigadierInjector {
      * @param plugin the plugin
      * @param dispatcher the command dispatcher
      */
-    public static void inject(LuckPermsPlugin plugin, CommandDispatcher<CommandSourceStack> dispatcher) {
+    public static void inject(LuckPermsPlugin plugin, CommandDispatcher<CommandSource> dispatcher) {
         Iterable<CommandNodeWithParent> tree = CommandNodeGraph.INSTANCE.traverse(
                 TraversalAlgorithm.DEPTH_FIRST_PRE_ORDER,
                 new CommandNodeWithParent(null, dispatcher.getRoot())
         );
 
         for (CommandNodeWithParent node : tree) {
-            Predicate<CommandSourceStack> requirement = node.node.getRequirement();
+            Predicate<CommandSource> requirement = node.node.getRequirement();
 
             // already injected - skip
             if (requirement instanceof InjectedPermissionRequirement) {
@@ -126,19 +128,19 @@ public final class BrigadierInjector {
      * Injected {@link CommandNode#getRequirement() requirement} that checks for a permission, before
      * delegating to the existing requirement.
      */
-    private static final class InjectedPermissionRequirement implements Predicate<CommandSourceStack> {
+    private static final class InjectedPermissionRequirement implements Predicate<CommandSource> {
         private final String permission;
-        private final Predicate<CommandSourceStack> delegate;
+        private final Predicate<CommandSource> delegate;
 
-        private InjectedPermissionRequirement(String permission, Predicate<CommandSourceStack> delegate) {
+        private InjectedPermissionRequirement(String permission, Predicate<CommandSource> delegate) {
             this.permission = permission;
             this.delegate = delegate;
         }
 
         @Override
-        public boolean test(CommandSourceStack source) {
-            if (source.getEntity() instanceof ServerPlayer) {
-                ServerPlayer player = (ServerPlayer) source.getEntity();
+        public boolean test(CommandSource source) {
+            if (source.getEntity() instanceof ServerPlayerEntity) {
+                ServerPlayerEntity player = (ServerPlayerEntity) source.getEntity();
 
                 UserCapability user = UserCapabilityImpl.get(player);
                 Tristate state = user.checkPermission(this.permission);
@@ -160,10 +162,10 @@ public final class BrigadierInjector {
 
         @Override
         public Iterable<? extends CommandNodeWithParent> successors(CommandNodeWithParent ctx) {
-            CommandNode<CommandSourceStack> node = ctx.node;
+            CommandNode<CommandSource> node = ctx.node;
             Collection<CommandNodeWithParent> successors = new ArrayList<>();
 
-            for (CommandNode<CommandSourceStack> child : node.getChildren()) {
+            for (CommandNode<CommandSource> child : node.getChildren()) {
                 successors.add(new CommandNodeWithParent(ctx, child));
             }
 
@@ -173,9 +175,9 @@ public final class BrigadierInjector {
 
     private static final class CommandNodeWithParent {
         private final CommandNodeWithParent parent;
-        private final CommandNode<CommandSourceStack> node;
+        private final CommandNode<CommandSource> node;
 
-        private CommandNodeWithParent(CommandNodeWithParent parent, CommandNode<CommandSourceStack> node) {
+        private CommandNodeWithParent(CommandNodeWithParent parent, CommandNode<CommandSource> node) {
             this.parent = parent;
             this.node = node;
         }

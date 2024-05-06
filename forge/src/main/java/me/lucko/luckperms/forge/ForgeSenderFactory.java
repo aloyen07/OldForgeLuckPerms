@@ -25,7 +25,6 @@
 
 package me.lucko.luckperms.forge;
 
-import com.mojang.brigadier.ParseResults;
 import me.lucko.luckperms.common.cacheddata.result.TristateResult;
 import me.lucko.luckperms.common.locale.TranslationManager;
 import me.lucko.luckperms.common.query.QueryOptionsImpl;
@@ -35,58 +34,57 @@ import me.lucko.luckperms.common.verbose.VerboseCheckTarget;
 import me.lucko.luckperms.common.verbose.event.CheckOrigin;
 import me.lucko.luckperms.forge.capabilities.UserCapability;
 import me.lucko.luckperms.forge.capabilities.UserCapabilityImpl;
+
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.luckperms.api.util.Tristate;
-import net.minecraft.commands.CommandSource;
-import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.network.chat.Component.Serializer;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.rcon.RconConsoleSource;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.command.CommandSource;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.util.text.ITextComponent;
 
 import java.util.Locale;
 import java.util.UUID;
 
-public class ForgeSenderFactory extends SenderFactory<LPForgePlugin, CommandSourceStack> {
+public class ForgeSenderFactory extends SenderFactory<LPForgePlugin, CommandSource> {
     public ForgeSenderFactory(LPForgePlugin plugin) {
         super(plugin);
     }
 
     @Override
-    protected UUID getUniqueId(CommandSourceStack commandSource) {
-        if (commandSource.getEntity() instanceof Player) {
+    protected UUID getUniqueId(CommandSource commandSource) {
+        if (commandSource.getEntity() instanceof PlayerEntity) {
             return commandSource.getEntity().getUUID();
         }
         return Sender.CONSOLE_UUID;
     }
 
     @Override
-    protected String getName(CommandSourceStack commandSource) {
-        if (commandSource.getEntity() instanceof Player) {
+    protected String getName(CommandSource commandSource) {
+        if (commandSource.getEntity() instanceof PlayerEntity) {
             return commandSource.getTextName();
         }
         return Sender.CONSOLE_NAME;
     }
 
     @Override
-    protected void sendMessage(CommandSourceStack sender, Component message) {
+    protected void sendMessage(CommandSource sender, Component message) {
         Locale locale;
-        if (sender.getEntity() instanceof ServerPlayer) {
-            ServerPlayer player = (ServerPlayer) sender.getEntity();
+        if (sender.getEntity() instanceof ServerPlayerEntity) {
+            ServerPlayerEntity player = (ServerPlayerEntity) sender.getEntity();
             UserCapabilityImpl user = UserCapabilityImpl.get(player);
             locale = user.getLocale(player);
         } else {
             locale = null;
         }
 
-        sender.sendSuccess(() -> toNativeText(TranslationManager.render(message, locale)), false);
+        sender.sendSuccess(toNativeText(TranslationManager.render(message, locale)), false);
     }
 
     @Override
-    protected Tristate getPermissionValue(CommandSourceStack commandSource, String node) {
-        if (commandSource.getEntity() instanceof ServerPlayer) {
-            ServerPlayer player = (ServerPlayer) commandSource.getEntity();
+    protected Tristate getPermissionValue(CommandSource commandSource, String node) {
+        if (commandSource.getEntity() instanceof ServerPlayerEntity) {
+            ServerPlayerEntity player = (ServerPlayerEntity) commandSource.getEntity();
             UserCapability user = UserCapabilityImpl.get(player);
             return user.checkPermission(node);
         }
@@ -98,26 +96,22 @@ public class ForgeSenderFactory extends SenderFactory<LPForgePlugin, CommandSour
     }
 
     @Override
-    protected boolean hasPermission(CommandSourceStack commandSource, String node) {
+    protected boolean hasPermission(CommandSource commandSource, String node) {
         return getPermissionValue(commandSource, node).asBoolean();
     }
 
     @Override
-    protected void performCommand(CommandSourceStack sender, String command) {
-        ParseResults<CommandSourceStack> results = sender.getServer().getCommands().getDispatcher().parse(command, sender);
-        sender.getServer().getCommands().performCommand(results, command);
+    protected void performCommand(CommandSource sender, String command) {
+        sender.getServer().getCommands().performCommand(sender, command);
     }
 
     @Override
-    protected boolean isConsole(CommandSourceStack sender) {
-        CommandSource output = sender.source;
-        return output == sender.getServer() || // Console
-                output.getClass() == RconConsoleSource.class || // Rcon
-                (output == CommandSource.NULL && sender.getTextName().equals("")); // Functions
+    protected boolean isConsole(CommandSource sender) {
+        return !(sender.getEntity() instanceof ServerPlayerEntity);
     }
 
-    public static net.minecraft.network.chat.Component toNativeText(Component component) {
-        return Serializer.fromJson(GsonComponentSerializer.gson().serializeToTree(component));
+    public static ITextComponent toNativeText(Component component) {
+        return ITextComponent.Serializer.fromJson(GsonComponentSerializer.gson().serialize(component));
     }
 
 }

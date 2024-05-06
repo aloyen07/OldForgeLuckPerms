@@ -25,16 +25,17 @@
 
 package me.lucko.luckperms.forge.service;
 
-import me.lucko.luckperms.common.command.access.CommandPermission;
 import me.lucko.luckperms.forge.LPForgePlugin;
-import net.minecraftforge.common.ForgeConfig;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.server.permission.events.PermissionGatherEvent;
-import net.minecraftforge.server.permission.handler.DefaultPermissionHandler;
-import net.minecraftforge.server.permission.nodes.PermissionNode;
-import net.minecraftforge.server.permission.nodes.PermissionTypes;
 
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.server.FMLServerStartedEvent;
+import net.minecraftforge.server.permission.IPermissionHandler;
+import net.minecraftforge.server.permission.PermissionAPI;
+
+import java.util.HashMap;
+
+@Mod.EventBusSubscriber
 public class ForgePermissionHandlerListener {
     private final LPForgePlugin plugin;
 
@@ -43,22 +44,19 @@ public class ForgePermissionHandlerListener {
     }
 
     @SubscribeEvent
-    public void onPermissionGatherHandler(PermissionGatherEvent.Handler event) {
-        // Override the default permission handler with LuckPerms
-        ForgeConfigSpec.ConfigValue<String> permissionHandler = ForgeConfig.SERVER.permissionHandler;
-        if (permissionHandler.get().equals(DefaultPermissionHandler.IDENTIFIER.toString())) {
-            permissionHandler.set(ForgePermissionHandler.IDENTIFIER.toString());
+    public void onPermissionGatherHandler(FMLServerStartedEvent event) {
+        plugin.getLogger().info("Changing permission handler to LuckPerms.");
+
+        IPermissionHandler permissionHandler = PermissionAPI.getPermissionHandler();
+        permissionHandler.getRegisteredNodes();
+        HashMap<String, String> nodesWithDescription = new HashMap<>();
+        for (String node : permissionHandler.getRegisteredNodes()) {
+            nodesWithDescription.put(node, permissionHandler.getNodeDescription(node));
         }
 
-        event.addPermissionHandler(ForgePermissionHandler.IDENTIFIER, permissions -> new ForgePermissionHandler(this.plugin, permissions));
-    }
+        ForgePermissionHandler newPermHandler = new ForgePermissionHandler(plugin, nodesWithDescription);
 
-    @SubscribeEvent
-    public void onPermissionGatherNodes(PermissionGatherEvent.Nodes event) {
-        // register luckperms nodes
-        for (CommandPermission permission : CommandPermission.values()) {
-            event.addNodes(new PermissionNode<>("luckperms", permission.getNode(), PermissionTypes.BOOLEAN, (player, uuid, context) -> false));
-        }
+        PermissionAPI.setPermissionHandler(newPermHandler);
     }
 
 }

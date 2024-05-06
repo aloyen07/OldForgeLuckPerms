@@ -25,142 +25,68 @@
 
 package me.lucko.luckperms.forge.service;
 
-import me.lucko.luckperms.common.cacheddata.type.MetaCache;
-import me.lucko.luckperms.common.cacheddata.type.PermissionCache;
-import me.lucko.luckperms.common.context.ImmutableContextSetImpl;
-import me.lucko.luckperms.common.model.User;
-import me.lucko.luckperms.common.verbose.event.CheckOrigin;
-import me.lucko.luckperms.forge.LPForgeBootstrap;
+import com.mojang.authlib.GameProfile;
 import me.lucko.luckperms.forge.LPForgePlugin;
-import me.lucko.luckperms.forge.capabilities.UserCapabilityImpl;
-import net.luckperms.api.context.ImmutableContextSet;
-import net.luckperms.api.query.QueryMode;
-import net.luckperms.api.query.QueryOptions;
-import net.luckperms.api.util.Tristate;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.server.permission.handler.IPermissionHandler;
-import net.minecraftforge.server.permission.nodes.PermissionDynamicContext;
-import net.minecraftforge.server.permission.nodes.PermissionNode;
-import net.minecraftforge.server.permission.nodes.PermissionType;
-import net.minecraftforge.server.permission.nodes.PermissionTypes;
+import me.lucko.luckperms.forge.capabilities.UserCapability;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.dedicated.DedicatedServer;
+import net.minecraftforge.server.permission.DefaultPermissionLevel;
+import net.minecraftforge.server.permission.IPermissionHandler;
+import net.minecraftforge.server.permission.context.IContext;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.*;
 
 public class ForgePermissionHandler implements IPermissionHandler {
-    public static final ResourceLocation IDENTIFIER = new ResourceLocation(LPForgeBootstrap.ID, "permission_handler");
+
+    //public static final ResourceLocation IDENTIFIER = new ResourceLocation(LPForgeBootstrap.ID, "permission_handler");
 
     private final LPForgePlugin plugin;
-    private final Set<PermissionNode<?>> permissionNodes;
+    // Node - Description
+    private final HashMap<String, String> permissionNodes;
 
-    public ForgePermissionHandler(LPForgePlugin plugin, Collection<PermissionNode<?>> permissionNodes) {
+    public ForgePermissionHandler(LPForgePlugin plugin, HashMap<String, String> permissionNodes) {
         this.plugin = plugin;
-        this.permissionNodes = Collections.unmodifiableSet(new HashSet<>(permissionNodes));
+        this.permissionNodes = new HashMap<>(permissionNodes);
 
-        for (PermissionNode<?> node : this.permissionNodes) {
-            this.plugin.getPermissionRegistry().insert(node.getNodeName());
+        for (String node : this.permissionNodes.keySet()) {
+            this.plugin.getPermissionRegistry().insert(node);
         }
     }
 
     @Override
-    public ResourceLocation getIdentifier() {
-        return IDENTIFIER;
+    public void registerNode(@Nonnull String node,
+                             @Nonnull DefaultPermissionLevel defaultPermissionLevel,
+                             @Nonnull String description) {
+        permissionNodes.put(node, description);
+        this.plugin.getPermissionRegistry().insert(node);
     }
 
     @Override
-    public Set<PermissionNode<?>> getRegisteredNodes() {
-        return this.permissionNodes;
+    @Nonnull
+    public Collection<String> getRegisteredNodes() {
+        return permissionNodes.keySet();
     }
 
     @Override
-    public <T> T getPermission(ServerPlayer player, PermissionNode<T> node, PermissionDynamicContext<?>... context) {
-        UserCapabilityImpl capability = UserCapabilityImpl.getNullable(player);
+    public boolean hasPermission(@Nonnull GameProfile gameProfile, @Nonnull String s, @Nullable IContext iContext) {
+        Optional<MinecraftServer> serverOptional = this.plugin.getBootstrap().getServer();
 
-        if (capability != null) {
-            User user = capability.getUser();
-            QueryOptions queryOptions = capability.getQueryOptionsCache().getQueryOptions();
-
-            T value = getPermissionValue(user, queryOptions, node, context);
-            if (value != null) {
-                return value;
-            }
+        if (serverOptional.isPresent()) {
+            return Objects.requireNonNull(((DedicatedServer) serverOptional.get()).getPlayerList().getPlayer(gameProfile.getId()))
+                    .getCapability(UserCapability.CAPABILITY)
+                    .orElseThrow(() -> new IllegalStateException("Player capability not found!"))
+                    .hasPermission(s);
+        } else {
+            throw new IllegalStateException("MinecraftServer is not initialized!");
         }
-
-        return node.getDefaultResolver().resolve(player, player.getUUID(), context);
     }
 
     @Override
-    public <T> T getOfflinePermission(UUID player, PermissionNode<T> node, PermissionDynamicContext<?>... context) {
-        User user = this.plugin.getUserManager().getIfLoaded(player);
-
-        if (user != null) {
-            QueryOptions queryOptions = user.getQueryOptions();
-            T value = getPermissionValue(user, queryOptions, node, context);
-            if (value != null) {
-                return value;
-            }
-        }
-
-        return node.getDefaultResolver().resolve(null, player, context);
+    @Nonnull
+    public String getNodeDescription(@Nonnull String s) {
+        return String.valueOf(permissionNodes.get(s));
     }
-
-    @SuppressWarnings("unchecked")
-    private static <T> T getPermissionValue(User user, QueryOptions queryOptions, PermissionNode<T> node, PermissionDynamicContext<?>... context) {
-        queryOptions = appendContextToQueryOptions(queryOptions, context);
-        String key = node.getNodeName();
-        PermissionType<T> type = node.getType();
-
-        // permission check
-        if (type == PermissionTypes.BOOLEAN) {
-            PermissionCache cache = user.getCachedData().getPermissionData(queryOptions);
-            Tristate value = cache.checkPermission(key, CheckOrigin.PLATFORM_API_HAS_PERMISSION).result();
-            if (value != Tristate.UNDEFINED) {
-                return (T) (Boolean) value.asBoolean();
-            }
-        }
-
-        // meta lookup
-        if (node.getType() == PermissionTypes.STRING) {
-            MetaCache cache = user.getCachedData().getMetaData(queryOptions);
-            String value = cache.getMetaOrChatMetaValue(node.getNodeName(), CheckOrigin.PLATFORM_API);
-            if (value != null) {
-                return (T) value;
-            }
-        }
-
-        // meta lookup (integer)
-        if (node.getType() == PermissionTypes.INTEGER) {
-            MetaCache cache = user.getCachedData().getMetaData(queryOptions);
-            String value = cache.getMetaOrChatMetaValue(node.getNodeName(), CheckOrigin.PLATFORM_API);
-            if (value != null) {
-                try {
-                    return (T) Integer.valueOf(Integer.parseInt(value));
-                } catch (IllegalArgumentException e) {
-                    // ignore
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private static QueryOptions appendContextToQueryOptions(QueryOptions queryOptions, PermissionDynamicContext<?>... context) {
-        if (context.length == 0 || queryOptions.mode() != QueryMode.CONTEXTUAL) {
-            return queryOptions;
-        }
-
-        ImmutableContextSet.Builder contextBuilder = new ImmutableContextSetImpl.BuilderImpl()
-                .addAll(queryOptions.context());
-
-        for (PermissionDynamicContext<?> dynamicContext : context) {
-            contextBuilder.add(dynamicContext.getDynamic().name(), dynamicContext.getSerializedValue());
-        }
-
-        return queryOptions.toBuilder().context(contextBuilder.build()).build();
-    }
-
 }

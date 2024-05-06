@@ -1,11 +1,23 @@
+buildscript {
+    dependencies {
+        classpath 'org.spongepowered:mixingradle:0.7-SNAPSHOT'
+    }
+}
+
 plugins {
     alias(libs.plugins.blossom)
     alias(libs.plugins.shadow)
     alias(libs.plugins.forgegradle)
+    id 'org.spongepowered.mixin' version '0.7.+'
 }
 
 sourceCompatibility = 1.8
-targetCompatibility = 17
+targetCompatibility = 1.8
+
+mixin {
+    add sourceSets.main, 'luckperms.refmap.json'
+    config 'luckperms.mixins.json'
+}
 
 blossom {
     replaceTokenIn 'src/main/java/me/lucko/luckperms/forge/LPForgeBootstrap.java'
@@ -21,6 +33,8 @@ dependencies {
     implementation project(':common')
     compileOnly project(':common:loader-utils')
     compileOnly project(':forge:forge-api')
+
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
 
 reobf {

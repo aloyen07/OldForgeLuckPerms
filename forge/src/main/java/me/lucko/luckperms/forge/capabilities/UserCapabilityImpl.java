@@ -31,55 +31,30 @@ import me.lucko.luckperms.common.locale.TranslationManager;
 import me.lucko.luckperms.common.model.User;
 import me.lucko.luckperms.common.verbose.event.CheckOrigin;
 import me.lucko.luckperms.forge.context.ForgeContextManager;
+
 import net.luckperms.api.query.QueryOptions;
 import net.luckperms.api.util.Tristate;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.common.util.LazyOptional;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import net.minecraft.entity.player.ServerPlayerEntity;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Locale;
 
 public class UserCapabilityImpl implements UserCapability {
 
-    private static LazyOptional<UserCapability> getCapability(Player player) {
-        if (!player.isRemoved()) {
-            return player.getCapability(CAPABILITY);
-        } else {
-            player.reviveCaps();
-            try {
-                return player.getCapability(CAPABILITY);
-            } finally {
-                player.invalidateCaps();
-            }
-        }
+    public static @Nonnull UserCapabilityImpl get(@Nonnull ServerPlayerEntity player) {
+        return (UserCapabilityImpl) player.getCapability(CAPABILITY)
+                .orElseThrow(() -> new IllegalStateException("Capability missing for " + player.getUUID()));
     }
 
-    /**
-     * Gets a {@link UserCapability} for a given {@link ServerPlayer}.
-     *
-     * @param player the player
-     * @return the capability
-     */
-    public static @NotNull UserCapabilityImpl get(@NotNull Player player) {
-        return (UserCapabilityImpl) getCapability(player).orElseThrow(() -> new IllegalStateException("Capability missing for " + player.getUUID()));
-    }
-
-    /**
-     * Gets a {@link UserCapability} for a given {@link ServerPlayer}.
-     *
-     * @param player the player
-     * @return the capability, or null
-     */
-    public static @Nullable UserCapabilityImpl getNullable(@NotNull Player player) {
-        return (UserCapabilityImpl) getCapability(player).resolve().orElse(null);
+    public static @Nullable UserCapabilityImpl getNullable(@Nonnull ServerPlayerEntity player) {
+        return (UserCapabilityImpl) player.getCapability(CAPABILITY).resolve().orElse(null);
     }
 
     private boolean initialised = false;
 
     private User user;
-    private QueryOptionsCache<ServerPlayer> queryOptionsCache;
+    private QueryOptionsCache<ServerPlayerEntity> queryOptionsCache;
     private String language;
     private Locale locale;
 
@@ -95,7 +70,7 @@ public class UserCapabilityImpl implements UserCapability {
         this.initialised = true;
     }
 
-    public void initialise(User user, ServerPlayer player, ForgeContextManager contextManager) {
+    public void initialise(User user, ServerPlayerEntity player, ForgeContextManager contextManager) {
         this.user = user;
         this.queryOptionsCache = new QueryOptionsCache<>(player, contextManager);
         this.initialised = true;
@@ -144,12 +119,12 @@ public class UserCapabilityImpl implements UserCapability {
         return getQueryOptionsCache().getQueryOptions();
     }
 
-    public QueryOptionsCache<ServerPlayer> getQueryOptionsCache() {
+    public QueryOptionsCache<ServerPlayerEntity> getQueryOptionsCache() {
         assertInitialised();
         return this.queryOptionsCache;
     }
 
-    public Locale getLocale(ServerPlayer player) {
+    public Locale getLocale(ServerPlayerEntity player) {
         if (this.language == null || !this.language.equals(player.getLanguage())) {
             this.language = player.getLanguage();
             this.locale = TranslationManager.parseLocale(this.language);

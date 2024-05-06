@@ -23,8 +23,5 @@ include (
         'common:loader-utils',
         'forge',
         'forge:loader',
-        'forge:forge-api',
-        'standalone',
-        'standalone:loader',
-        'standalone:app'
+        'forge:forge-api'
 )

@@ -26,22 +26,23 @@
 package me.lucko.luckperms.forge.messaging;
 
 import com.google.common.collect.Iterables;
-import io.netty.buffer.Unpooled;
+
 import me.lucko.luckperms.common.messaging.pluginmsg.AbstractPluginMessageMessenger;
 import me.lucko.luckperms.common.plugin.scheduler.SchedulerTask;
 import me.lucko.luckperms.forge.LPForgePlugin;
+
 import net.luckperms.api.messenger.IncomingMessageConsumer;
 import net.luckperms.api.messenger.Messenger;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.network.PacketBuffer;
+import net.minecraft.network.play.client.CCustomPayloadPacket;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.players.PlayerList;
-import net.minecraftforge.network.ChannelBuilder;
-import net.minecraftforge.network.EventNetworkChannel;
-import net.minecraftforge.network.NetworkRegistry;
+import net.minecraft.server.management.PlayerList;
+import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.fml.network.NetworkRegistry;
+import net.minecraftforge.fml.network.event.EventNetworkChannel;
+
+import io.netty.buffer.Unpooled;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -50,7 +51,6 @@ public class PluginMessageMessenger extends AbstractPluginMessageMessenger imple
     private static final ResourceLocation CHANNEL = new ResourceLocation(AbstractPluginMessageMessenger.CHANNEL);
 
     private final LPForgePlugin plugin;
-    private EventNetworkChannel channel;
 
     public PluginMessageMessenger(LPForgePlugin plugin, IncomingMessageConsumer consumer) {
         super(consumer);
@@ -58,13 +58,13 @@ public class PluginMessageMessenger extends AbstractPluginMessageMessenger imple
     }
 
     public void init() {
-        this.channel = ChannelBuilder.named(CHANNEL).eventNetworkChannel();
-        this.channel.addListener(event -> {
+        EventNetworkChannel channel = NetworkRegistry.newEventChannel(CHANNEL, () -> "1", predicate -> true, predicate -> true);
+        channel.addListener(event -> {
             byte[] buf = new byte[event.getPayload().readableBytes()];
             event.getPayload().readBytes(buf);
 
             handleIncomingMessage(buf);
-            event.getSource().setPacketHandled(true);
+            event.getSource().get().setPacketHandled(true);
         });
     }
 
@@ -72,7 +72,7 @@ public class PluginMessageMessenger extends AbstractPluginMessageMessenger imple
     protected void sendOutgoingMessage(byte[] buf) {
         AtomicReference<SchedulerTask> taskRef = new AtomicReference<>();
         SchedulerTask task = this.plugin.getBootstrap().getScheduler().asyncRepeating(() -> {
-            ServerPlayer player = this.plugin.getBootstrap().getServer()
+            ServerPlayerEntity player = this.plugin.getBootstrap().getServer()
                     .map(MinecraftServer::getPlayerList)
                     .map(PlayerList::getPlayers)
                     .map(players -> Iterables.getFirst(players, null))
@@ -82,10 +82,9 @@ public class PluginMessageMessenger extends AbstractPluginMessageMessenger imple
                 return;
             }
 
-            FriendlyByteBuf byteBuf = new FriendlyByteBuf(Unpooled.buffer());
-            byteBuf.writeBytes(buf);
-            byteBuf.writeResourceLocation(CHANNEL);
-            Packet<?> packet = new ClientboundCustomPayloadPacket(byteBuf);
+            PacketBuffer buffer = new PacketBuffer(Unpooled.buffer());
+            buffer.writeBytes(buf);
+            CCustomPayloadPacket packet = new CCustomPayloadPacket(CHANNEL, buffer);
 
             player.connection.send(packet);
 

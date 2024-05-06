@@ -26,24 +26,23 @@
 package me.lucko.luckperms.forge.listeners;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+
 import me.lucko.luckperms.common.api.implementation.ApiGroup;
 import me.lucko.luckperms.common.cache.BufferedRequest;
 import me.lucko.luckperms.common.event.LuckPermsEventListener;
 import me.lucko.luckperms.common.util.CaffeineFactory;
 import me.lucko.luckperms.forge.LPForgePlugin;
+
 import net.luckperms.api.event.EventBus;
 import net.luckperms.api.event.context.ContextUpdateEvent;
 import net.luckperms.api.event.group.GroupDataRecalculateEvent;
 import net.luckperms.api.event.user.UserDataRecalculateEvent;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerPlayer;
 
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Calls {@link net.minecraft.server.players.PlayerList#sendPlayerPermissionLevel(ServerPlayer)} when a players permissions change.
- */
 public class ForgeCommandListUpdater implements LuckPermsEventListener {
     private final LPForgePlugin plugin;
     private final LoadingCache<UUID, SendBuffer> sendingBuffers = CaffeineFactory.newBuilder()
@@ -74,7 +73,7 @@ public class ForgeCommandListUpdater implements LuckPermsEventListener {
     }
 
     private void onContextUpdate(ContextUpdateEvent e) {
-        e.getSubject(ServerPlayer.class).ifPresent(p -> requestUpdate(p.getUUID()));
+        e.getSubject(ServerPlayerEntity.class).ifPresent(p -> requestUpdate(p.getUUID()));
     }
 
     private void requestUpdate(UUID uniqueId) {

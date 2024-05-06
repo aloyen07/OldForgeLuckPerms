@@ -23,28 +23,41 @@
  *  SOFTWARE.
  */
 
-package me.lucko.luckperms.forge;
+package me.lucko.luckperms.forge.events;
 
-import me.lucko.luckperms.common.api.LuckPermsApiProvider;
-import me.lucko.luckperms.common.event.AbstractEventBus;
-import me.lucko.luckperms.common.plugin.LuckPermsPlugin;
+import com.mojang.authlib.GameProfile;
+import net.minecraft.network.NetworkManager;
+import net.minecraftforge.eventbus.api.Event;
 
-import net.minecraftforge.fml.ModContainer;
-import net.minecraftforge.fml.ModList;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 
-public class ForgeEventBus extends AbstractEventBus<ModContainer> {
-    public ForgeEventBus(LuckPermsPlugin plugin, LuckPermsApiProvider apiProvider) {
-        super(plugin, apiProvider);
+public class PlayerNegotiationEvent extends Event {
+
+    private final GameProfile profile;
+    private final NetworkManager manager;
+    private final List<Future<Void>> futures = new ArrayList<>();
+
+    public PlayerNegotiationEvent(NetworkManager connection, GameProfile profile) {
+        this.profile = profile;
+        this.manager = connection;
     }
 
-    @Override
-    protected ModContainer checkPlugin(Object mod) throws IllegalArgumentException {
-        ModContainer modContainer = ModList.get().getModContainerByObject(mod).orElse(null);
-        if (modContainer != null) {
-            return modContainer;
-        }
-
-        throw new IllegalArgumentException("Object " + mod + " (" + mod.getClass().getName() + ") is not a ModContainer.");
+    public void enqueueWork(Runnable runnable) {
+        this.enqueueWork(CompletableFuture.runAsync(runnable));
     }
 
+    public void enqueueWork(Future<Void> future) {
+        this.futures.add(future);
+    }
+
+    public NetworkManager getConnection() {
+        return this.manager;
+    }
+
+    public GameProfile getProfile() {
+        return profile;
+    }
 }

@@ -1,12 +1,26 @@
-plugins {
-    alias(libs.plugins.forgegradle)
+buildscript {
+    repositories {
+        maven { url 'https://maven.minecraftforge.net/' }
+    }
+
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:5.1.+'
+    }
 }
 
+apply plugin: 'net.minecraftforge.gradle'
+
 sourceCompatibility = 1.8
-targetCompatibility = 17
+targetCompatibility = 1.8
 
 minecraft {
     mappings channel: 'official', version: minecraftVersion
+}
+
+configurations {
+}
+
+repositories {
 }
 
 dependencies {

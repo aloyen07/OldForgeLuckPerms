@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "me.lucko.luckperms.forge.mixins",
+  "compatibilityLevel": "JAVA_8",
+  "refmap": "creativerebornserver.refmap.json",
+  "mixins": [],
+  "server": [
+    "CapabilityProviderMixin",
+    "LivingEntityMixin",
+    "ServerLoginNetHandlerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

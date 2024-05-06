@@ -27,14 +27,12 @@ package me.lucko.luckperms.forge.capabilities;
 
 import net.luckperms.api.query.QueryOptions;
 import net.luckperms.api.util.Tristate;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.CapabilityManager;
-import net.minecraftforge.common.capabilities.CapabilityToken;
+import net.minecraftforge.common.capabilities.CapabilityInject;
 
 /**
- * A Forge {@link Capability} that attaches LuckPerms functionality onto {@link ServerPlayer}s.
  */
 public interface UserCapability {
 
@@ -46,7 +44,8 @@ public interface UserCapability {
     /**
      * The capability instance.
      */
-    Capability<UserCapability> CAPABILITY = CapabilityManager.get(new CapabilityToken<UserCapability>(){});
+    @CapabilityInject(ServerPlayerEntity.class)
+    Capability<UserCapability> CAPABILITY = null;
 
     /**
      * Checks for a permission.
