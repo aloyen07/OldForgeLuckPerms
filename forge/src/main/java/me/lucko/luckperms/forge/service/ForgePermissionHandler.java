@@ -29,6 +29,7 @@ import com.mojang.authlib.GameProfile;
 import me.lucko.luckperms.forge.LPForgePlugin;
 import me.lucko.luckperms.forge.capabilities.UserCapability;
 
+import me.lucko.luckperms.forge.capabilities.UserCapabilityImpl;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.dedicated.DedicatedServer;
 import net.minecraftforge.server.permission.DefaultPermissionLevel;
@@ -76,7 +77,7 @@ public class ForgePermissionHandler implements IPermissionHandler {
 
         if (serverOptional.isPresent()) {
             return Objects.requireNonNull(((DedicatedServer) serverOptional.get()).getPlayerList().getPlayer(gameProfile.getId()))
-                    .getCapability(UserCapability.CAPABILITY)
+                    .getCapability(UserCapabilityImpl.CAPABILITY)
                     .orElseThrow(() -> new IllegalStateException("Player capability not found!"))
                     .hasPermission(s);
         } else {

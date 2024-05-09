@@ -39,10 +39,12 @@ import net.luckperms.api.event.group.GroupDataRecalculateEvent;
 import net.luckperms.api.event.user.UserDataRecalculateEvent;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.server.MinecraftServer;
+import net.minecraftforge.fml.common.Mod;
 
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+@Mod.EventBusSubscriber
 public class ForgeCommandListUpdater implements LuckPermsEventListener {
     private final LPForgePlugin plugin;
     private final LoadingCache<UUID, SendBuffer> sendingBuffers = CaffeineFactory.newBuilder()

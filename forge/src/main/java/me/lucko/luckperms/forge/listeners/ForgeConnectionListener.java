@@ -38,6 +38,7 @@ import me.lucko.luckperms.forge.capabilities.UserCapabilityImpl;
 
 import me.lucko.luckperms.forge.events.PlayerNegotiationEvent;
 import net.kyori.adventure.text.Component;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.login.server.SDisconnectLoginPacket;
@@ -62,7 +63,7 @@ public class ForgeConnectionListener extends AbstractConnectionListener {
     @SubscribeEvent
     public void onPlayerNegotiation(PlayerNegotiationEvent event) {
         String username = event.getProfile().getName();
-        UUID uniqueId = event.getProfile().isComplete() ? event.getProfile().getId() : UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(StandardCharsets.UTF_8));;
+        UUID uniqueId = event.getProfile().isComplete() ? event.getProfile().getId() : PlayerEntity.createPlayerUUID(event.getProfile());
 
         if (this.plugin.getConfiguration().get(ConfigKeys.DEBUG_LOGINS)) {
             this.plugin.getLogger().info("Processing pre-login (sync phase) for " + uniqueId + " - " + username);

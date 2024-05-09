@@ -25,55 +25,22 @@
 
 package me.lucko.luckperms.forge.capabilities;
 
-import net.luckperms.api.query.QueryOptions;
-import net.luckperms.api.util.Tristate;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.nbt.INBT;
+import net.minecraft.util.Direction;
 import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.CapabilityInject;
 
-public abstract class UserCapability {
+import javax.annotation.Nullable;
 
-    @CapabilityInject(UserCapability.class)
-    public static final Capability<UserCapability> CAPABILITY = null;
+public class UserCapabilityStorageImpl implements Capability.IStorage<UserCapability> {
 
-    /**
-     * The identifier used for the capability
-     */
-    public static final ResourceLocation IDENTIFIER = new ResourceLocation("luckperms", "user");
-
-
-    /**
-     * Checks for a permission.
-     *
-     * @param permission the permission
-     * @return the result
-     */
-    public boolean hasPermission(String permission) {
-        return checkPermission(permission).asBoolean();
+    @Nullable
+    @Override
+    public INBT writeNBT(Capability<UserCapability> capability, UserCapability userCapability, Direction direction) {
+        return null;
     }
 
-    /**
-     * Runs a permission check.
-     *
-     * @param permission the permission
-     * @return the result
-     */
-    public abstract Tristate checkPermission(String permission);
+    @Override
+    public void readNBT(Capability<UserCapability> capability, UserCapability userCapability, Direction direction, INBT inbt) {
 
-    /**
-     * Runs a permission check.
-     *
-     * @param permission the permission
-     * @param queryOptions the query options
-     * @return the result
-     */
-    public abstract Tristate checkPermission(String permission, QueryOptions queryOptions);
-
-    /**
-     * Gets the user's currently query options.
-     *
-     * @return the current query options for the user
-     */
-    public abstract QueryOptions getQueryOptions();
-
+    }
 }

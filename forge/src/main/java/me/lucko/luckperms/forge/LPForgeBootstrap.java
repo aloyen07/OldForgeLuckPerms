@@ -33,12 +33,16 @@ import me.lucko.luckperms.common.plugin.classpath.JarInJarClassPathAppender;
 import me.lucko.luckperms.common.plugin.logging.Log4jPluginLogger;
 import me.lucko.luckperms.common.plugin.logging.PluginLogger;
 import me.lucko.luckperms.common.plugin.scheduler.SchedulerAdapter;
+import me.lucko.luckperms.forge.capabilities.UserCapability;
+import me.lucko.luckperms.forge.capabilities.UserCapabilityImpl;
+import me.lucko.luckperms.forge.capabilities.UserCapabilityStorageImpl;
 import me.lucko.luckperms.forge.util.ForgeEventBusFacade;
 
 import net.luckperms.api.platform.Platform;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.management.PlayerList;
+import net.minecraftforge.common.capabilities.CapabilityManager;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModContainer;
@@ -48,12 +52,16 @@ import net.minecraftforge.fml.event.server.FMLServerStoppingEvent;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.forgespi.language.IModInfo;
 
+import net.minecraftforge.forgespi.language.IModLanguageProvider;
+import net.minecraftforge.forgespi.language.ModFileScanData;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Supplier;
 
@@ -146,6 +154,8 @@ public final class LPForgeBootstrap implements LuckPermsBootstrap, LoaderBootstr
 
     @Override
     public void onLoad() { // called by the loader on FMLCommonSetupEvent
+        CapabilityManager.INSTANCE.register(UserCapability.class, new UserCapabilityStorageImpl(), UserCapabilityImpl::new);
+
         this.startTime = Instant.now();
         try {
             this.plugin.load();

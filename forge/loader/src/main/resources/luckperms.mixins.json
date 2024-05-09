@@ -3,7 +3,7 @@
   "minVersion": "0.8",
   "package": "me.lucko.luckperms.forge.mixins",
   "compatibilityLevel": "JAVA_8",
-  "refmap": "creativerebornserver.refmap.json",
+  "refmap": "luckperms.refmap.json",
   "mixins": [],
   "server": [
     "CapabilityProviderMixin",

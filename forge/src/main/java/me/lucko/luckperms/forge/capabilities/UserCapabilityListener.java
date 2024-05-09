@@ -25,6 +25,8 @@
 
 package me.lucko.luckperms.forge.capabilities;
 
+import me.lucko.luckperms.forge.LPForgeBootstrap;
+import me.lucko.luckperms.forge.LPForgePlugin;
 import me.lucko.luckperms.forge.mixins.CapabilityProviderMixin;
 import me.lucko.luckperms.forge.mixins.LivingEntityMixin;
 import net.minecraft.entity.Entity;
@@ -37,10 +39,12 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+@Mod.EventBusSubscriber
 public class UserCapabilityListener {
 
 //    @SubscribeEvent
@@ -91,7 +95,7 @@ public class UserCapabilityListener {
         @Nonnull
         @Override
         public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> cap, @Nullable Direction side) {
-            if (!cap.getName().equals(UserCapability.CAPABILITY.getName())) {
+            if (!cap.getName().equals(UserCapabilityImpl.CAPABILITY.getName())) {
                 return LazyOptional.empty();
             }
 

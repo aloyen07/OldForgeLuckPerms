@@ -56,11 +56,12 @@ public class ServerLoginNetHandlerMixin {
     @Shadow @Final private static ITextComponent IGNORE_STATUS_REASON;
 
     @Inject(method = "handleIntention", at = @At("HEAD"), cancellable = true)
-    public void handleInjectionMixin(CHandshakePacket p_147383_1_, CallbackInfo ci) {
+    public void handleIntentionMixin(CHandshakePacket p_147383_1_, CallbackInfo ci) {
 
         if (ServerLifecycleHooks.handleServerLogin(p_147383_1_, this.connection)) {
-            switch (p_147383_1_.getIntention()) {
-                case LOGIN:
+            ProtocolType intention = p_147383_1_.getIntention();
+
+                if (intention.equals(ProtocolType.LOGIN)) {
                     this.connection.setProtocol(ProtocolType.LOGIN);
                     if (p_147383_1_.getProtocolVersion() != SharedConstants.getCurrentVersion().getProtocolVersion()) {
                         TranslationTextComponent message = luckperms$getMessage(p_147383_1_);
@@ -70,20 +71,17 @@ public class ServerLoginNetHandlerMixin {
                     } else {
                         this.connection.setListener(new LuckPermsServerLoginNetHandler(this.server, this.connection));
                     }
-                    break;
-                case STATUS:
+                } else if (intention.equals(ProtocolType.STATUS)) {
                     if (this.server.repliesToStatus()) {
                         this.connection.setProtocol(ProtocolType.STATUS);
                         this.connection.setListener(new ServerStatusNetHandler(this.server, this.connection));
                     } else {
                         this.connection.disconnect(IGNORE_STATUS_REASON);
                     }
-                    break;
-                default:
+                } else {
                     throw new UnsupportedOperationException("Invalid intention " + p_147383_1_.getIntention());
+                }
             }
-
-        }
 
         ci.cancel();
     }

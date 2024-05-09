@@ -27,17 +27,19 @@ package me.lucko.luckperms.forge.loader;
 
 import me.lucko.luckperms.common.loader.JarInJarClassLoader;
 import me.lucko.luckperms.common.loader.LoaderBootstrap;
-
+import me.lucko.luckperms.forge.capabilities.UserCapability;
+import net.minecraftforge.common.capabilities.CapabilityManager;
 import net.minecraftforge.fml.ModContainer;
 import net.minecraftforge.fml.ModList;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLEnvironment;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.function.Supplier;
 
 @Mod(value = "luckperms")
@@ -50,6 +52,7 @@ public class ForgeLoaderPlugin implements Supplier<ModContainer> {
     private final ModContainer container;
 
     private JarInJarClassLoader loader;
+    private LoaderBootstrap plugin;
 
     public ForgeLoaderPlugin() {
         this.container = ModList.get().getModContainerByObject(this).orElse(null);
@@ -69,7 +72,7 @@ public class ForgeLoaderPlugin implements Supplier<ModContainer> {
     }
 
     public void onCommonSetup(FMLCommonSetupEvent event) {
-        LoaderBootstrap plugin = this.loader.instantiatePlugin(BOOTSTRAP_CLASS, Supplier.class, this);
+        this.plugin = this.loader.instantiatePlugin(BOOTSTRAP_CLASS, Supplier.class, this);
         plugin.onLoad();
     }
 }

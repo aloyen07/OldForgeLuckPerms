@@ -35,12 +35,14 @@ import me.lucko.luckperms.forge.context.ForgeContextManager;
 import net.luckperms.api.query.QueryOptions;
 import net.luckperms.api.util.Tristate;
 import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.CapabilityInject;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Locale;
 
-public class UserCapabilityImpl implements UserCapability {
+public class UserCapabilityImpl extends UserCapability {
 
     public static @Nonnull UserCapabilityImpl get(@Nonnull ServerPlayerEntity player) {
         return (UserCapabilityImpl) player.getCapability(CAPABILITY)

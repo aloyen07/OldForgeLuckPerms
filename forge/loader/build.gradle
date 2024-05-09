@@ -1,27 +1,26 @@
 buildscript {
-    repositories {
-        maven { url 'https://plugins.gradle.org/m2' }
-        maven { url 'https://maven.minecraftforge.net/' }
-    }
-
     dependencies {
-        classpath 'gradle.plugin.com.github.johnrengelman:shadow:7.1.2'
-        classpath 'net.minecraftforge.gradle:ForgeGradle:5.1.+'
+        classpath 'org.spongepowered:mixingradle:0.7-SNAPSHOT'
     }
 }
 
-apply plugin: 'com.github.johnrengelman.shadow'
-apply plugin: 'java-library'
-apply plugin: 'net.minecraftforge.gradle'
+plugins {
+    alias(libs.plugins.shadow)
+    alias(libs.plugins.forgegradle)
+    id("java-library")
+    id 'org.spongepowered.mixin' version '0.7.+'
+}
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
-minecraft {
-    mappings channel: 'official', version: minecraftVersion
+mixin {
+    add sourceSets.main, 'luckperms.refmap.json'
+    config 'luckperms.mixins.json'
 }
 
-repositories {
+minecraft {
+    mappings channel: 'official', version: minecraftVersion
 }
 
 dependencies {
@@ -29,6 +28,8 @@ dependencies {
     implementation project(':api')
     implementation project(':common:loader-utils')
     implementation project(':forge:forge-api')
+
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
 
 build {
@@ -47,7 +48,7 @@ jar {
                 'Specification-Vendor': 'LuckPerms',
                 'Specification-Version': '1',
                 "TweakClass": "org.spongepowered.asm.launch.MixinTweaker",
-                "MixinConfigs": "luckperms.mixins.json",
+                "MixinConfigs": "creativerebornserver.mixins.json",
                 "FMLCorePluginContainsFMLMod": "true",
                 "ForceLoadAsMod": "true",
         )

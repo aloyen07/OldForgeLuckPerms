@@ -35,9 +35,11 @@ import net.luckperms.api.event.context.ContextUpdateEvent;
 import net.luckperms.api.event.user.UserDataRecalculateEvent;
 import net.luckperms.api.query.QueryOptions;
 import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraftforge.fml.common.Mod;
 
 import java.util.Map;
 
+@Mod.EventBusSubscriber
 public class ForgeAutoOpListener implements LuckPermsEventListener {
     private static final String NODE = "luckperms.autoop";
 

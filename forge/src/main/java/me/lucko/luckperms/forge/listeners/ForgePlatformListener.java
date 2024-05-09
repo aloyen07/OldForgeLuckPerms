@@ -40,11 +40,14 @@ import net.minecraft.server.management.OpList;
 import net.minecraftforge.event.AddReloadListenerEvent;
 import net.minecraftforge.event.CommandEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.server.FMLServerStartedEvent;
+import net.minecraftforge.fml.server.ServerLifecycleHooks;
 
 import java.io.IOException;
 import java.util.Locale;
 
+@Mod.EventBusSubscriber
 public class ForgePlatformListener {
     private final LPForgePlugin plugin;
 
@@ -74,12 +77,13 @@ public class ForgePlatformListener {
 
     @SubscribeEvent
     public void onAddReloadListener(AddReloadListenerEvent event) {
-        Commands commands = plugin.getBootstrap().getServer().get().getCommands();
-        BrigadierInjector.inject(this.plugin, commands.getDispatcher());
     }
 
     @SubscribeEvent
     public void onServerStarted(FMLServerStartedEvent event) {
+        Commands commands = ServerLifecycleHooks.getCurrentServer().getCommands();
+        BrigadierInjector.inject(this.plugin, commands.getDispatcher());
+
         if (!this.plugin.getConfiguration().get(ConfigKeys.OPS_ENABLED)) {
             OpList ops = event.getServer().getPlayerList().getOps();
             ops.getEntries().clear();
